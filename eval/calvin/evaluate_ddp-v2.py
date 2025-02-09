@@ -19,7 +19,7 @@ from termcolor import colored
 sys.path.insert(0, Path(__file__).absolute().parents[2].as_posix())
 import torch.multiprocessing as mp
 
-os.environ["PYOPENGL_PLATFORM"] = "osmesa"
+os.environ["PYOPENGL_PLATFORM"] = "egl"
 import pyrender
 
 from calvin_agent.evaluation.multistep_sequences import get_sequences
@@ -79,7 +79,7 @@ def evaluate_policy(
 ):
     """Run this function to evaluate a model on the CALVIN challenge."""
     # conf_dir = Path("path/to/calvin/calvin_models") / "conf"
-    conf_dir = Path("/mnt/bn/robotics/resources/calvin/calvin_models") / "conf"
+    conf_dir = Path("/home/ljh/RoboVLMs/calvin/calvin_models") / "conf"
     task_cfg = OmegaConf.load(
         conf_dir / "callbacks/rollout/tasks/new_playtable_tasks.yaml"
     )

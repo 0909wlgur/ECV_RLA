@@ -2,8 +2,10 @@ import os
 
 ckpt_paths = [
     (
-        "path/to/VLA-Checkpoint-{epoch}-{steps}.ckpt",
-        "path/to/VLA-Checkpoint-config.json",
+        # "path/to/VLA-Checkpoint-{epoch}-{steps}.ckpt",
+        "RoboVLMs/checkpoints/kosmos_ph_calvin_abcd.pt",
+        # "path/to/VLA-Checkpoint-config.json",
+        "RoboVLMs/configs/kosmos_ph_calvin_abcd.json"
     )
 ]
 
