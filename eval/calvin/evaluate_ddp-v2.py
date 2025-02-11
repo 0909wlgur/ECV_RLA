@@ -458,7 +458,7 @@ def main():
         eval_log_dir = ckpt_dir
     else:
         eval_log_dir = os.path.join(CACHE_ROOT, eval_exp_name)
-    os.system(f"sudo mkdir {eval_log_dir}")
+    os.system(f"sudo mkdir -p {eval_log_dir}")
     os.system(f"sudo chmod 777 -R {eval_log_dir}")
 
     args.local_rank, args.rank, args.world_size = world_info_from_env()

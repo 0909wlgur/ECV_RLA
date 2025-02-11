@@ -15,6 +15,7 @@ from robovlms.utils.dist_train import get_rank
 from robovlms.train.train_utils import adjust_learning_rate
 import robovlms.model.backbone as RoboVLM_Backbone
 
+import time
 
 class BaseTrainer(pl.LightningModule):
     def __init__(self, configs):
@@ -427,9 +428,12 @@ class BaseTrainer(pl.LightningModule):
             gripper_action_chunck = action_chunck[..., -1]
 
         if isinstance(rgb, torch.Tensor):
+            # print("DEBUG | base_trainer.py | Before seq_len rgb shape:", rgb.shape)
             rgb = rgb[:, :seq_len]
+            # print("DEBUG | base_trainer.py | After seq_len rgb shape:", rgb.shape)
             if hand_rgb is not None:
                 hand_rgb = hand_rgb[:, :seq_len]
+                # print("DEBUG | base_trainer.py | hand_rgb shape:", hand_rgb.shape)
 
         chunck_mask = batch.get("chunck_mask", None)
         if chunck_mask is not None:
@@ -646,6 +650,8 @@ class BaseTrainer(pl.LightningModule):
     def inference_step(self, batch):
         with torch.no_grad():
             # import pdb; pdb.set_trace()
+            # self._process_batch() execute only data slicing and transfer to GPU
+            data_transfer_start_time = time.time()
             (
                 rgb,
                 hand_rgb,
@@ -667,7 +673,13 @@ class BaseTrainer(pl.LightningModule):
                 rel_state,
                 data_source,
             ) = self._process_batch(batch)
-
+            torch.cuda.synchronize()
+            data_transfer_time = time.time() - data_transfer_start_time
+            
+            # print("DEBUG | base_trainer.py | language:", language)
+            # printed as embedded word(int)
+            
+            policy_process_start_time = time.time()
             prediction = self.model.inference(
                 rgb,
                 language,
@@ -695,8 +707,12 @@ class BaseTrainer(pl.LightningModule):
                 raw_text=raw_text,
                 rel_state=rel_state,
             )
-
-            return prediction
+            torch.cuda.synchronize()
+            policy_process_time = time.time() - policy_process_start_time
+            # return prediction
+            return {"prediction": prediction,
+                    "data_transfer_time": data_transfer_time,
+                    "policy_process_time": policy_process_time}
 
     @staticmethod
     def convert_old_state_dict(state_dict):

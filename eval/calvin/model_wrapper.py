@@ -22,6 +22,8 @@ from robovlms.data.data_utils import (
 from queue import Queue
 from robovlms.model.policy_head.action_tokenizer import ActionTokenizer
 
+import time
+
 fwd_decay_ratio = 1
 
 
@@ -306,6 +308,8 @@ class CustomModel:
             text_x = input_ids.unsqueeze(0)
             mask = torch.full((1, text_x.shape[-1]), True, dtype=torch.bool)
         else:
+            # print("DEBUG | model_wrapper.py | lang:", lang)
+            # DEBUG | model_wrapper.py | lang: ORDER PROMPT
             text_x, mask = self.text_preprocess([lang])
 
         return (
@@ -316,10 +320,17 @@ class CustomModel:
         )
 
     def step(self, obs, goal):
-        """Step function."""
+        """Step function.
+        obs: image
+        goal: sentence
+        """
         input_dict = dict()
+        # Data transfer and clipping for VLM
+        # Not transformer execution
+        preprocess_start_time = time.time()
         image_x, gripper_x, text_x, mask = self.preprocess(obs, goal, self.action_space)
-
+        preprocess_time = time.time() - preprocess_start_time
+        
         input_dict["rgb"] = image_x
         input_dict["hand_rgb"] = gripper_x
         input_dict["text"] = text_x
@@ -328,10 +339,14 @@ class CustomModel:
         if self.action_space == "discrete":
             input_dict["instr_and_action_ids"] = text_x
             input_dict["instr_and_action_mask"] = mask
-
+        
         with torch.no_grad():
-            action = self.policy.inference_step(input_dict)["action"]
-
+            # action = self.policy.inference_step(input_dict)["action"]
+            result = self.policy.inference_step(input_dict)
+            action = result["prediction"]["action"]
+            data_transfer_time = result["data_transfer_time"]
+            policy_process_time = result["policy_process_time"]
+        
         if self.action_space != "discrete":
             # print(action)
             if action[0].ndim == action[1].ndim + 1:
@@ -427,7 +442,10 @@ class CustomModel:
 
         self.rollout_step_counter += 1
         action[-1] = 1 if action[-1] > 0 else -1
-        print(f"step {self.rollout_step_counter} action {action}")
+        # Recursive print during inference
+        if self.rollout_step_counter % 10 == 0:
+            print(f"step {self.rollout_step_counter} action {action}")
+            # print(f"DEBUG | preprocess time: {preprocess_time} | data transfer time: {data_transfer_time} | policy time: {policy_process_time}")
         return action
 
     def reset(self):

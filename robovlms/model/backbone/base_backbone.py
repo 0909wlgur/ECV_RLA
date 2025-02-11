@@ -194,6 +194,8 @@ class BaseRoboVLM(nn.Module):
             bs, seq_len, -1, image_features[0].shape[-1]
         )
 
+        # print("DEBUG | base_backbone.py | self.use_vision_resampler:", self.use_vision_resampler)
+        # DEBUG | base_backbone.py | self.use_vision_resampler: False
         if self.use_vision_resampler:
             ### downsample at token num dim: b, s, n, d -> b, s, v d
             # b T F v d -> b, T, n, d
@@ -313,13 +315,34 @@ class BaseRoboVLM(nn.Module):
         insert_idx=1,
         fill_zero=False,
     ):
+        """ Merge information by multi modal execution
+
+        Args:
+            input_embeds (torch.Tensor): word_embedding
+            multimodal_feats (torch.Tensor, optional): vision image or multi-modal embed(language + image). Defaults to None.
+            labels (torch.Tensor, optional): _description_. Defaults to None.
+            attention_mask (torch.Tensor, optional): _description_. Defaults to None.
+            is_image (bool, optional): Whether contains image or not. Defaults to True.
+            insert_idx (int, optional): BOS(Beginning Of Sentence) token or Something token. Defaults to 1.
+            fill_zero (bool, optional): _description_. Defaults to False.
+
+        Returns:
+            torch.Tensor: multimodal_embeds,
+            torch.Tensor: mutlimodal_labels,
+            torch.Tensor: multimodal_attention_mask,
+            torch.Tensor: insert_mask,
+        """
         # if is_image, the vision_x needs to be processed by self.encode_images
         # otherwise merge
         bs = input_embeds.shape[0]
 
         if is_image:
             rgb_feats = self.encode_images(multimodal_feats)
-
+            # print("DEBUG | base_backpone.py | rgb_feats shape:", rgb_feats.shape)
+            # DEBUG | base_backpone.py | rgb_feats shape: torch.Size([1, 1, 64, 2048])
+            
+            # print("DEBUG | base_backbone.py | start_image_token_id:", self.start_image_token_id)
+            # DEBUG | base_backbone.py | start_image_token_id: None
             if self.start_image_token_id is not None:
                 image_start_embed = (
                     self.word_embedding(self.start_image_token_id.to(self.model.device))
@@ -342,10 +365,12 @@ class BaseRoboVLM(nn.Module):
                 rgb_feats = torch.cat(
                     [image_start_embed, rgb_feats, image_end_embed], dim=2
                 )
-
+            
             rgb_feats = rearrange(
                 rgb_feats, "b l n d -> b (l n) d"
             )  # flatten seq_len and n_tok_per_img dim
+            # print("DEBUG | base_backbone.py | merge_multi_modal_input | After rgb_feats shape:", rgb_feats.shape)
+            # DEBUG | base_backbone.py | merge_multi_modal_input | After rgb_feats shape: torch.Size([1, 64, 2048])
 
         else:
             rgb_feats = multimodal_feats
@@ -356,6 +381,9 @@ class BaseRoboVLM(nn.Module):
             [input_embeds[:, :insert_idx], rgb_feats, input_embeds[:, insert_idx:]],
             dim=1,
         )
+        # print("DEBUG | base_backbone.py | multimodal_embeds shape:", multimodal_embeds.shape)
+        # DEBUG | base_backbone.py | multimodal_embeds shape: torch.Size([1, 82, 2048])
+        # Case of vision_x and sentence_embed, [1(Batch Size), input_embeds length + 64(rgb_feats token num), vis_dim(2048)]
 
         insert_mask = (
             torch.cat(
@@ -996,16 +1024,25 @@ class BaseRoboVLM(nn.Module):
     ):
         loss = {}
         assert vision_x is not None
+        # print("DEBUG | base_backbone.py | vision_x shape:", vision_x.shape)
+        # DEBUG | base_backbone.py | vision_x shape: torch.Size([1, 1, 3, 224, 224])
+        # print("DEBUG | base_backbone.py | lang_x shape:", lang_x.shape)
+        # DEBUG | base_backbone.py | lang_x shape: torch.Size([1, sentence_length])
+        # print("DEBUG | base_backbone.py | insert_idx:", insert_idx)
+        # DEBUG | base_backbone.py | insert_idx: 1
+        
         bs, seq_len = vision_x.shape[:2]
         action_space = self.act_head_configs.get("action_space", "continuous")
 
         eos_offset = int(self.tokenizer.eos_token is not None)
+        # bos_offset = Beginning of sentence token
         bos_offset = int(self.tokenizer.bos_token is not None)
 
         history_type = self.act_head_configs.get("history_type", "post")
 
         if history_type in ["post", "pre"]:
             vision_x = vision_x.reshape(bs * seq_len, *vision_x.shape[2:]).unsqueeze(1)
+            # vision_x shape : torch.Size([1, 3, 224, 224])
             # lang_x = lang_x.repeat(seq_len, 1)
             # attention_mask = attention_mask.repeat(seq_len, 1)
             lang_x = lang_x.unsqueeze(1).repeat(1, seq_len, 1).flatten(0, 1)
@@ -1018,6 +1055,9 @@ class BaseRoboVLM(nn.Module):
                 ).unsqueeze(1)
 
         input_embeds = self.word_embedding(lang_x)
+        # print("DEBUG | base_backbone.py | input_embed shape:", input_embeds.shape)
+        # DEBUG | base_backbone.py | input_embed shape: torch.Size([1, token length, 2048])
+        
         # get <bos> & <eos> offset
         lang_size = (
             lang_x.shape[-1]
@@ -1209,7 +1249,7 @@ class BaseRoboVLM(nn.Module):
         loss = {}
         if isinstance(data_source, list):
             data_source = "_".join(data_source)
-
+        
         if "action" in data_source:
             tmp_loss = self.forward_action(
                 vision_x=vision_x,
