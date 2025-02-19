@@ -5,7 +5,7 @@ conda activate robovlm
 CUR_DIR=$(cd $(dirname $0); pwd)
 # sudo chmod 777 -R ./
 
-port=6042
+port=7000
 
 echo "master port: ${port}"
 
@@ -13,9 +13,9 @@ set -x
 export PYTHONUNBUFFERED=1
 
 export OMP_NUM_THREADS=16
-export NCCL_IB_DISABLE=0
-export NCCL_IB_GID_INDEX=3
-export NCCL_SOCKET_IFNAME=eth0
+# export NCCL_IB_DISABLE=0
+# export NCCL_IB_GID_INDEX=3
+# export NCCL_SOCKET_IFNAME=eth0
 
 # setup distributed training args
 GPUS_PER_NODE=1

@@ -19,6 +19,7 @@ from robovlms.data.vid_llava_constants import (
 )
 from robovlms.model.text_encoder.clip_text_encoder import ClipTextFeatureEncoder
 
+import time
 
 def initialize_param(model):
     with torch.no_grad():
@@ -1031,6 +1032,8 @@ class BaseRoboVLM(nn.Module):
         # print("DEBUG | base_backbone.py | insert_idx:", insert_idx)
         # DEBUG | base_backbone.py | insert_idx: 1
         
+        token_preprocessing_start_time = time.time()
+        
         bs, seq_len = vision_x.shape[:2]
         action_space = self.act_head_configs.get("action_space", "continuous")
 
@@ -1151,7 +1154,9 @@ class BaseRoboVLM(nn.Module):
                 multimodal_attention_mask = rearrange(
                     multimodal_attention_mask, "(b l) n -> b (l n)", l=seq_len
                 )
-
+        
+        token_preprocessing_end_time = time.time()
+        
         output = self.model(
             input_ids=None,
             attention_mask=multimodal_attention_mask,
@@ -1161,6 +1166,8 @@ class BaseRoboVLM(nn.Module):
             use_cache=use_cache,
             output_hidden_states=True,
         )
+        
+        llm_end_time = time.time()
 
         output_hs = output.hidden_states[-1].clone()
         if history_type == "pre":
@@ -1210,6 +1217,12 @@ class BaseRoboVLM(nn.Module):
             action_hs, action_labels, action_mask
         )
 
+        policy_head_end_time = time.time()
+        
+        print(f"DEBUG | token preprocess time: {token_preprocessing_end_time - token_preprocessing_start_time}s "
+              f"| LLM time: {llm_end_time - token_preprocessing_end_time}s "
+              f"| Policy head time: {policy_head_end_time - llm_end_time}s"
+              )
         # cur = time.time()
         # print("predict action consumes {} sec".format(cur-st))
         # st = cur

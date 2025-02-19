@@ -347,6 +347,88 @@ def rollout(
         )
     return False
 
+def rollout_pipe(
+    env,
+    model,
+    task_oracle,
+    subtask,
+    val_annotations,
+    debug,
+    eval_log_dir,
+    subtask_i,
+    sequence_i,
+    raw_calvin=False,
+    diverse_inst=False,
+):
+    """Run the rollout on one subtask following the order:
+       get frame 0 -> get frame 1 -> get frame 2 -> act from frame 0 ->
+       get frame 3 -> act from frame 1 -> get frame 4 -> act from frame 2 -> ..."""
+    if debug:
+        print(f"{subtask} ", end="")
+        time.sleep(0.5)
+        img_list = []
+
+    # 사전 준비: 처음 4프레임을 미리 획득하여 버퍼에 저장합니다.
+    pipeline_stage = 4
+    frame_buffer = []
+    for _ in range(pipeline_stage):
+        frame = env.get_obs()  # get frame i
+        frame_buffer.append(frame)
+        if debug:
+            img_copy = copy.deepcopy(frame["rgb_obs"]["rgb_static"])
+            img_list.append(img_copy)
+
+    # 서브태스크에 대한 언어 어노테이션 획득
+    if diverse_inst:
+        lang_annotation = val_annotations[sequence_i][subtask_i]
+    else:
+        lang_annotation = val_annotations[subtask][0]
+    model.reset()
+    start_info = env.get_info()
+
+    # EP_LEN번의 액션을 진행합니다.
+    for i in range(EP_LEN):
+        # 버퍼의 가장 오래된 프레임(예, frame 0, frame 1, …)을 사용하여 액션 결정
+        action = model.step(frame_buffer[0], lang_annotation)
+        # 액션 실행: env 내부 상태 업데이트
+        _, _, _, current_info = env.step(action)
+
+        # 태스크 성공 여부 확인
+        current_task_info = task_oracle.get_task_info_for_set(
+            start_info, current_info, {subtask}
+        )
+        if current_task_info:
+            if debug:
+                print(colored("success", "green"), end=" ")
+                clip = ImageSequenceClip(img_list, fps=30)
+                clip.write_gif(
+                    os.path.join(
+                        eval_log_dir, f"{sequence_i}-{subtask_i}-{subtask}-succ.gif"
+                    ),
+                    fps=30,
+                )
+            return True
+
+        # 마지막 액션이 아니라면, 버퍼를 업데이트:
+        # - 사용한 가장 오래된 프레임(frame_buffer[0])은 제거하고,
+        # - 새 프레임을 받아 버퍼의 뒤에 추가합니다.
+        if i < EP_LEN - 1:
+            frame_buffer.pop(0)
+            new_frame = env.get_obs()  # 새로운 프레임 (예: frame 3, frame 4, …)
+            frame_buffer.append(new_frame)
+            if debug:
+                img_copy = copy.deepcopy(new_frame["rgb_obs"]["rgb_static"])
+                img_list.append(img_copy)
+
+    if debug:
+        print(colored("fail", "red"), end=" ")
+        clip = ImageSequenceClip(img_list, fps=30)
+        clip.write_gif(
+            os.path.join(eval_log_dir, f"{sequence_i}-{subtask_i}-{subtask}-fail.gif"),
+            fps=30,
+        )
+    return False
+
 
 def parser_args():
     seed_everything(0, workers=True)  # type:ignore

@@ -309,7 +309,7 @@ class CustomModel:
             mask = torch.full((1, text_x.shape[-1]), True, dtype=torch.bool)
         else:
             # print("DEBUG | model_wrapper.py | lang:", lang)
-            # DEBUG | model_wrapper.py | lang: ORDER PROMPT
+            # DEBUG | model_wrapper.py | lang: ORDER_PROMPT
             text_x, mask = self.text_preprocess([lang])
 
         return (
@@ -327,9 +327,9 @@ class CustomModel:
         input_dict = dict()
         # Data transfer and clipping for VLM
         # Not transformer execution
-        preprocess_start_time = time.time()
+        # preprocess_start_time = time.time()
         image_x, gripper_x, text_x, mask = self.preprocess(obs, goal, self.action_space)
-        preprocess_time = time.time() - preprocess_start_time
+        # preprocess_time = time.time() - preprocess_start_time
         
         input_dict["rgb"] = image_x
         input_dict["hand_rgb"] = gripper_x
@@ -344,8 +344,8 @@ class CustomModel:
             # action = self.policy.inference_step(input_dict)["action"]
             result = self.policy.inference_step(input_dict)
             action = result["prediction"]["action"]
-            data_transfer_time = result["data_transfer_time"]
-            policy_process_time = result["policy_process_time"]
+            # data_transfer_time = result["data_transfer_time"]
+            # policy_process_time = result["policy_process_time"]
         
         if self.action_space != "discrete":
             # print(action)
@@ -443,7 +443,7 @@ class CustomModel:
         self.rollout_step_counter += 1
         action[-1] = 1 if action[-1] > 0 else -1
         # Recursive print during inference
-        if self.rollout_step_counter % 10 == 0:
+        if self.rollout_step_counter % 30 == 0:
             print(f"step {self.rollout_step_counter} action {action}")
             # print(f"DEBUG | preprocess time: {preprocess_time} | data transfer time: {data_transfer_time} | policy time: {policy_process_time}")
         return action

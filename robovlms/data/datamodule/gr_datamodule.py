@@ -64,6 +64,13 @@ class GRDataModule(pl.LightningDataModule):
         #     import pickle as pkl
         #     pkl.dump(dataset_config, file)
 
+        # print("DEBUG | gr_datamodule.py | dataset_config key:", dataset_config.keys())
+        # DEBUG | gr_datamodule.py | dataset_config key: dict_keys(['data_dir', 'shift_first', 'model_name', 
+        # 'rgb_pad', 'gripper_pad', 'is_training', 'tokenizer', 'tokenizer_config', 'fwd_pred_next_n', 
+        # 'window_size', 'image_size', 'image_fn', 'discrete', 'discrete_action', 'use_mu_law', 'mu_val', 
+        # 'n_bin', 'min_action', 'max_action', 'discrete_action_history', 'act_step', 'norm_action', 
+        # 'norm_min', 'norm_max', 'regular_action', 'x_mean', 'x_std', 'weights', 'tcp_rel'])
+                
         dataset = getattr(robovlms.data, dataset_type)(**dataset_config)
 
         sampler_cls = None
