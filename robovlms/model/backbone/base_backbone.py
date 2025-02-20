@@ -1082,6 +1082,7 @@ class BaseRoboVLM(nn.Module):
         )
 
         if vision_gripper is not None:
+            # print("DEBUG | vision_gripper is not None")
             (
                 multimodal_embeds,
                 mutlimodal_labels,
@@ -1096,6 +1097,7 @@ class BaseRoboVLM(nn.Module):
             )
 
         if rel_state is not None and self.use_state:
+            # print("DEBUG | use state")
             insert_idx = multimodal_embeds.shape[1] - int(
                 self.tokenizer.eos_token is not None
             )  # insert at last
@@ -1121,6 +1123,7 @@ class BaseRoboVLM(nn.Module):
             )
 
         if action_space == "continuous":
+            # print("DEBUG | action space is continuous")
             insert_idx = multimodal_embeds.shape[1] - int(
                 self.tokenizer.eos_token is not None
             )  # insert at last
@@ -1219,10 +1222,10 @@ class BaseRoboVLM(nn.Module):
 
         policy_head_end_time = time.time()
         
-        print(f"DEBUG | token preprocess time: {token_preprocessing_end_time - token_preprocessing_start_time}s "
-              f"| LLM time: {llm_end_time - token_preprocessing_end_time}s "
-              f"| Policy head time: {policy_head_end_time - llm_end_time}s"
-              )
+        # print(f"DEBUG | token preprocess time: {token_preprocessing_end_time - token_preprocessing_start_time}s "
+        #       f"| LLM time: {llm_end_time - token_preprocessing_end_time}s "
+        #       f"| Policy head time: {policy_head_end_time - llm_end_time}s"
+        # )
         # cur = time.time()
         # print("predict action consumes {} sec".format(cur-st))
         # st = cur

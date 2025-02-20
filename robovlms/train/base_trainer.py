@@ -651,7 +651,7 @@ class BaseTrainer(pl.LightningModule):
         with torch.no_grad():
             # import pdb; pdb.set_trace()
             # self._process_batch() execute only data slicing and transfer to GPU
-            data_transfer_start_time = time.time()
+            # data_transfer_start_time = time.time()
             (
                 rgb,
                 hand_rgb,
@@ -673,13 +673,13 @@ class BaseTrainer(pl.LightningModule):
                 rel_state,
                 data_source,
             ) = self._process_batch(batch)
-            torch.cuda.synchronize()
-            data_transfer_time = time.time() - data_transfer_start_time
+            # torch.cuda.synchronize()
+            # data_transfer_time = time.time() - data_transfer_start_time
             
             # print("DEBUG | base_trainer.py | language:", language)
             # printed as embedded word(int)
             
-            policy_process_start_time = time.time()
+            # policy_process_start_time = time.time()
             prediction = self.model.inference(
                 rgb,
                 language,
@@ -707,12 +707,12 @@ class BaseTrainer(pl.LightningModule):
                 raw_text=raw_text,
                 rel_state=rel_state,
             )
-            torch.cuda.synchronize()
-            policy_process_time = time.time() - policy_process_start_time
+            # torch.cuda.synchronize()
+            # policy_process_time = time.time() - policy_process_start_time
             # return prediction
             return {"prediction": prediction,
-                    "data_transfer_time": data_transfer_time,
-                    "policy_process_time": policy_process_time}
+                    "data_transfer_time": None,
+                    "policy_process_time": None}
 
     @staticmethod
     def convert_old_state_dict(state_dict):

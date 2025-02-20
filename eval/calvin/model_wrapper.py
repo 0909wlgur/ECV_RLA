@@ -331,6 +331,8 @@ class CustomModel:
         image_x, gripper_x, text_x, mask = self.preprocess(obs, goal, self.action_space)
         # preprocess_time = time.time() - preprocess_start_time
         
+        # print("DEBUG | gripper_x: ", gripper_x)
+        
         input_dict["rgb"] = image_x
         input_dict["hand_rgb"] = gripper_x
         input_dict["text"] = text_x
@@ -445,7 +447,6 @@ class CustomModel:
         # Recursive print during inference
         if self.rollout_step_counter % 30 == 0:
             print(f"step {self.rollout_step_counter} action {action}")
-            # print(f"DEBUG | preprocess time: {preprocess_time} | data transfer time: {data_transfer_time} | policy time: {policy_process_time}")
         return action
 
     def reset(self):
